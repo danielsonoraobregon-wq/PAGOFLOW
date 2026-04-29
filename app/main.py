@@ -250,9 +250,26 @@ async def upload_contrato(lid: int, file: UploadFile = File(...)):
     ext        = "jpg" if mime_type.startswith("image/") else "pdf"
     filename   = f"Contrato_Lote{lote_num}_{nombre_fmt}.{ext}"
     folder     = f"PagoFlow/Lote-{lote_num}/Contratos"
-    await upload_to_drive(file_bytes, filename, folder, mime_type)
+    drive_ok = await upload_to_drive(file_bytes, filename, folder, mime_type)
 
     update_lote_contract(lid, contrato, filename, monto_total)
+
+    # El enganche se cobra al momento de la firma — registrarlo como pago automático
+    enganche = float(contrato.get("enganche") or 0)
+    if enganche > 0:
+        save_pago(
+            lote_id        = lid,
+            monto          = enganche,
+            monto_esperado = enganche,
+            referencia     = "ENGANCHE",
+            banco          = "Firma de contrato",
+            fecha          = datetime.now().strftime("%Y-%m-%d"),
+            archivo_drive  = filename,
+            drive_ok       = drive_ok,
+            discrepancia   = None,
+            estatus        = "ok",
+        )
+
     return {"status": "ok", "contrato": contrato}
 
 # ─── Editar lote ─────────────────────────────────────────────────────────────

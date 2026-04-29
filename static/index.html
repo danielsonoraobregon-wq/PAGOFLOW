@@ -72,6 +72,11 @@ tr:hover td{background:#fafaf8;}
 .field label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px;}
 .field input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);}
 .modal-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;}
+.modal-wide{width:480px;}
+.pago-lotes-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:280px;overflow-y:auto;margin-bottom:4px;}
+.lote-card.selected{border-color:#1D9E75;background:var(--gbg);}
+.step-label{font-size:10px;color:var(--muted);margin-bottom:10px;}
+.upload-zone.disabled{opacity:.45;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -126,7 +131,10 @@ tr:hover td{background:#fafaf8;}
       <div class="card">
         <div class="card-head">
           <div class="card-title">Lotes</div>
-          <button class="btn btn-g btn-sm" onclick="openNewLote()">+ Agregar lote</button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-sm" onclick="abrirModalPago()">Registrar pago</button>
+            <button class="btn btn-g btn-sm" onclick="openNewLote()">+ Agregar lote</button>
+          </div>
         </div>
         <div style="padding:16px;" id="lotes-grid"></div>
       </div>
@@ -203,8 +211,52 @@ tr:hover td{background:#fafaf8;}
   </div>
 </div>
 
-<input type="file" id="file-contrato" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="uploadContrato(this)">
-<input type="file" id="file-comprobante" accept=".jpg,.jpeg,.png,.pdf,.txt" style="display:none" onchange="uploadComprobante(this)">
+<!-- Modal pago 2 pasos -->
+<div class="modal-bg" id="modal-pago">
+  <div class="modal modal-wide">
+
+    <!-- Paso 1: seleccionar lote -->
+    <div id="pago-step1">
+      <div class="modal-title">Registrar pago</div>
+      <div class="step-label">Paso 1 de 2 — Selecciona el lote</div>
+      <div class="pago-lotes-grid" id="pago-lotes-grid"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal('modal-pago')">Cancelar</button>
+        <button class="btn btn-g" id="pago-next-btn" disabled onclick="pagoIrPaso2()">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- Paso 2: confirmación + archivo -->
+    <div id="pago-step2" style="display:none;">
+      <div class="modal-title">Registrar pago</div>
+      <div class="step-label">Paso 2 de 2 — Confirma y sube el comprobante</div>
+      <div id="pago-lote-resumen" style="background:#fafaf8;border-radius:7px;padding:10px 12px;font-size:12px;margin-bottom:12px;border:1px solid var(--border);"></div>
+      <div class="field">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="pago-confirm-cb" onchange="pagoToggleFile()" style="margin-top:2px;">
+          <span>Confirmo que el comprobante corresponde al lote seleccionado</span>
+        </label>
+      </div>
+      <div class="upload-zone disabled" id="pago-upload-zone" data-action="pago-upload" style="margin-bottom:12px;">
+        <div style="font-size:20px;margin-bottom:6px;">📤</div>
+        <div id="pago-upload-label">Seleccionar comprobante (JPG, PNG o PDF)</div>
+      </div>
+      <div id="pago-progress" style="display:none;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:5px;" id="pago-progress-label">Subiendo...</div>
+        <div class="progress-bg"><div class="progress-fill" id="pago-progress-fill" style="width:0%;transition:width .4s;"></div></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="pago-back-btn" onclick="pagoVolverPaso1()">← Volver</button>
+        <button class="btn" onclick="closeModal('modal-pago')">Cancelar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<input type="file" id="file-contrato" accept=".pdf,.jpg,.jpeg,.png" style="opacity:0;position:absolute;width:1px;height:1px;pointer-events:none;" onchange="uploadContrato(this)">
+<input type="file" id="file-comprobante" accept=".jpg,.jpeg,.png,.pdf,.txt" style="opacity:0;position:absolute;width:1px;height:1px;pointer-events:none;" onchange="uploadComprobante(this)">
+<input type="file" id="file-pago-modal" accept=".jpg,.jpeg,.png,.pdf" style="opacity:0;position:absolute;width:1px;height:1px;pointer-events:none;" onchange="pagoSubirArchivo(this)">
 
 <script>
 let currentProject = null;
@@ -333,9 +385,6 @@ async function loadLoteDetail(lid) {
   const pct    = total > 0 ? Math.min(100, Math.round(pagado / total * 100)) : 0;
 
   const loteInfoEl = document.getElementById('lote-info');
-  loteInfoEl.dataset.numero = lote.numero;
-  loteInfoEl.dataset.nombre = lote.cliente_nombre;
-  loteInfoEl.dataset.phone  = lote.cliente_phone;
   loteInfoEl.innerHTML = `
     <div class="cfield"><span class="clabel">Cliente</span><span class="cval">${lote.cliente_nombre}</span></div>
     <div class="cfield"><span class="clabel">Teléfono</span><span class="cval mono">+${lote.cliente_phone}</span></div>
@@ -349,6 +398,9 @@ async function loadLoteDetail(lid) {
       <div style="font-size:10px;color:var(--muted);margin-top:3px;">${pct}% pagado</div>
     </div>` : ''}
   `;
+  loteInfoEl.dataset.numero = lote.numero;
+  loteInfoEl.dataset.nombre = lote.cliente_nombre;
+  loteInfoEl.dataset.phone  = lote.cliente_phone;
 
   // Contrato
   const contrato = lote.contrato_json;
@@ -371,7 +423,7 @@ async function loadLoteDetail(lid) {
   } else {
     cb.innerHTML = '<span class="badge bwarn">Sin contrato</span>';
     ci.innerHTML = `
-      <div class="upload-zone" onclick="document.getElementById('file-contrato').click()">
+      <div class="upload-zone" data-action="upload-contrato">
         <div style="font-size:20px;margin-bottom:6px;">📄</div>
         <div>Subir contrato</div>
         <div style="font-size:10px;margin-top:3px;">PDF, JPG o PNG — la IA extrae los datos automáticamente</div>
@@ -495,6 +547,145 @@ async function loadAllPagos() {
     <td>${p.fecha||'—'}</td>
     <td>${p.estatus==='ok'?'<span class="badge bok">✓</span>':'<span class="badge berr">⚠</span>'}</td>
   </tr>`).join('');
+}
+
+// ─── Delegación de eventos (Bug 2 + modal pago) ───────────────────────────────
+document.addEventListener('click', function(e) {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.dataset.action;
+
+  if (action === 'upload-contrato') {
+    document.getElementById('file-contrato').click();
+
+  } else if (action === 'pago-upload') {
+    if (!el.classList.contains('disabled')) {
+      document.getElementById('file-pago-modal').click();
+    }
+
+  } else if (action === 'pago-select-lote') {
+    document.querySelectorAll('[data-action="pago-select-lote"]').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    pagoLoteSeleccionado = {
+      lid:    parseInt(el.dataset.lid),
+      numero: el.dataset.lnum,
+      nombre: el.dataset.lnom
+    };
+    document.getElementById('pago-next-btn').disabled = false;
+  }
+});
+
+// ─── Modal pago 2 pasos ───────────────────────────────────────────────────────
+let pagoLoteSeleccionado = null;
+
+async function abrirModalPago(pid) {
+  pid = pid || currentProject;
+  if (!pid) return alert('Abre un proyecto primero');
+
+  pagoLoteSeleccionado = null;
+  document.getElementById('pago-next-btn').disabled = true;
+  document.getElementById('pago-confirm-cb').checked = false;
+  document.getElementById('pago-progress').style.display = 'none';
+  document.getElementById('pago-progress-fill').style.width = '0%';
+  document.getElementById('pago-upload-label').textContent = 'Seleccionar comprobante (JPG, PNG o PDF)';
+  document.getElementById('pago-step1').style.display = 'block';
+  document.getElementById('pago-step2').style.display  = 'none';
+  const zone = document.getElementById('pago-upload-zone');
+  zone.classList.add('disabled');
+
+  document.getElementById('modal-pago').classList.add('open');
+
+  const grid = document.getElementById('pago-lotes-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted);">Cargando lotes...</div>';
+
+  const lotes = await fetch(`/api/projects/${pid}/lotes`).then(r => r.json()).catch(() => []);
+
+  if (!lotes.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted);">Sin lotes en este proyecto</div>';
+    return;
+  }
+
+  grid.innerHTML = lotes.map(l => {
+    const pagado = l.monto_pagado || 0;
+    const total  = l.monto_total  || 0;
+    const pct    = total > 0 ? Math.min(100, Math.round(pagado / total * 100)) : 0;
+    return `
+    <div class="lote-card" data-action="pago-select-lote"
+         data-lid="${l.id}" data-lnum="${l.numero}" data-lnom="${l.cliente_nombre}">
+      <div class="lote-num">Lote ${l.numero}</div>
+      <div class="lote-name">${l.cliente_nombre}</div>
+      ${total > 0 ? `<div style="font-size:10px;color:var(--muted);margin-top:4px;">${pct}% pagado</div>` : ''}
+      <div style="margin-top:6px;">
+        ${l.contrato_json ? '<span class="badge bok">Contrato ✓</span>' : '<span class="badge bwarn">Sin contrato</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function pagoIrPaso2() {
+  if (!pagoLoteSeleccionado) return;
+  document.getElementById('pago-step1').style.display = 'none';
+  document.getElementById('pago-step2').style.display  = 'block';
+  document.getElementById('pago-lote-resumen').innerHTML = `
+    <div class="cfield"><span class="clabel">Lote</span><span class="cval">${pagoLoteSeleccionado.numero}</span></div>
+    <div class="cfield" style="border:none;padding-bottom:0;"><span class="clabel">Cliente</span><span class="cval">${pagoLoteSeleccionado.nombre}</span></div>
+  `;
+}
+
+function pagoVolverPaso1() {
+  document.getElementById('pago-step1').style.display = 'block';
+  document.getElementById('pago-step2').style.display  = 'none';
+  document.getElementById('pago-confirm-cb').checked  = false;
+  document.getElementById('pago-upload-zone').classList.add('disabled');
+}
+
+function pagoToggleFile() {
+  const checked = document.getElementById('pago-confirm-cb').checked;
+  const zone = document.getElementById('pago-upload-zone');
+  zone.classList.toggle('disabled', !checked);
+}
+
+async function pagoSubirArchivo(input) {
+  const file = input.files[0];
+  if (!file || !pagoLoteSeleccionado) return;
+
+  const progress      = document.getElementById('pago-progress');
+  const progressFill  = document.getElementById('pago-progress-fill');
+  const progressLabel = document.getElementById('pago-progress-label');
+  const backBtn       = document.getElementById('pago-back-btn');
+
+  document.getElementById('pago-upload-label').textContent = file.name;
+  document.getElementById('pago-upload-zone').classList.add('disabled');
+  backBtn.disabled = true;
+  progress.style.display = 'block';
+  progressLabel.textContent = 'Subiendo comprobante...';
+  progressFill.style.width = '25%';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    progressFill.style.width = '60%';
+    const res = await fetch(`/api/lotes/${pagoLoteSeleccionado.lid}/comprobante`, { method:'POST', body: fd });
+    progressFill.style.width = '100%';
+
+    if (res.ok) {
+      progressLabel.textContent = '✅ Comprobante procesado y subido a Drive';
+      setTimeout(() => {
+        closeModal('modal-pago');
+        if (currentLote === pagoLoteSeleccionado.lid) loadLoteDetail(currentLote);
+        loadStats();
+        loadRecentPagos();
+      }, 1600);
+    } else {
+      progressLabel.textContent = '⚠️ Error al procesar el comprobante';
+      backBtn.disabled = false;
+    }
+  } catch {
+    progressLabel.textContent = '⚠️ Error de conexión';
+    backBtn.disabled = false;
+  }
+  input.value = '';
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
