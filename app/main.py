@@ -315,8 +315,8 @@ async def api_add_lote(pid: int, request: Request):
 
 # ─── Generador de recibos ────────────────────────────────────────────────────
 
-@app.get("/api/lotes/{lid}/recibo")
-async def api_generar_recibo(lid: int):
+@app.post("/api/lotes/{lid}/recibo")
+async def api_generar_recibo(lid: int, request: Request):
     from app.recibo import generar_recibo
 
     lote = get_lote(lid)
@@ -325,15 +325,18 @@ async def api_generar_recibo(lid: int):
     if not lote.get("contrato_json"):
         raise HTTPException(400, "El lote no tiene contrato cargado")
 
+    d         = await request.json()
+    monto     = float(d.get("monto") or 0)
+    tipo      = d.get("tipo", "mensualidad")
+    forma_pago = d.get("forma_pago", "transferencia")
+
     contrato  = json.loads(lote["contrato_json"]) if isinstance(lote["contrato_json"], str) else lote["contrato_json"]
     proyecto  = get_project(lote["project_id"])
     pagos     = get_pagos_by_lote(lid)
 
-    # Número de mensualidad = pagos registrados que no son enganche + 1
-    mens_pagadas  = sum(1 for p in pagos if p.get("referencia") != "ENGANCHE")
+    mens_pagadas    = sum(1 for p in pagos if p.get("referencia") != "ENGANCHE")
     num_mensualidad = mens_pagadas + 1
 
-    monto           = float(contrato.get("mensualidad") or 0)
     vendedor_nombre = os.getenv("VENDEDOR_NOMBRE", "Vendedor")
     ciudad          = os.getenv("CIUDAD", "Monterrey")
     estado          = os.getenv("ESTADO", "Nuevo León")
@@ -344,19 +347,21 @@ async def api_generar_recibo(lid: int):
         contrato        = contrato,
         num_mensualidad = num_mensualidad,
         monto           = monto,
+        tipo            = tipo,
+        forma_pago      = forma_pago,
         vendedor_nombre = vendedor_nombre,
         ciudad          = ciudad,
         estado          = estado,
     )
 
-    lote_num  = str(lote["numero"]).zfill(2)
-    nombre_f  = lote["cliente_nombre"].replace(" ", "")
-    filename  = f"Recibo_Lote{lote_num}_{nombre_f}_Mens{num_mensualidad}.docx"
+    lote_num = str(lote["numero"]).zfill(2)
+    nombre_f = lote["cliente_nombre"].replace(" ", "")
+    filename = f"Recibo_Lote{lote_num}_{nombre_f}_Mens{num_mensualidad}.docx"
 
     return Response(
-        content     = doc_bytes,
-        media_type  = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers     = {"Content-Disposition": f'attachment; filename="{filename}"'},
+        content    = doc_bytes,
+        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers    = {"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 # ─── Stats y pagos globales ───────────────────────────────────────────────────

@@ -29,15 +29,30 @@ def ordinal_es(n: int) -> str:
     return _n2w(n, to='ordinal').upper()
 
 
+FORMAS_PAGO = {
+    "transferencia": "transferencia bancaria",
+    "efectivo":      "efectivo",
+    "cheque":        "cheque",
+}
+
+TIPOS = {
+    "mensualidad": "mensualidad",
+    "abono":       "abono",
+    "enganche":    "enganche",
+    "otro":        "pago",
+}
+
 def generar_recibo(
     lote: dict,
     proyecto: dict,
     contrato: dict,
     num_mensualidad: int,
     monto: float,
-    vendedor_nombre: str,
-    ciudad: str,
-    estado: str,
+    tipo: str = "mensualidad",
+    forma_pago: str = "transferencia",
+    vendedor_nombre: str = "Vendedor",
+    ciudad: str = "Monterrey",
+    estado: str = "Nuevo León",
 ) -> bytes:
     doc = Document()
 
@@ -54,13 +69,15 @@ def generar_recibo(
 
     now       = datetime.now()
     fecha_str = f"{now.day} de {MESES[now.month - 1]} del año {now.year}"
-    ordinal   = ordinal_es(num_mensualidad)
+    ordinal      = ordinal_es(num_mensualidad)
+    tipo_texto   = TIPOS.get(tipo, "pago")
+    forma_texto  = FORMAS_PAGO.get(forma_pago, forma_pago)
 
     # Título
     titulo = (
         f"RECIBO DE PAGO LOTE N.º {lote['numero']} "
         f"{proyecto['nombre'].upper()} "
-        f"{ordinal} MENSUALIDAD."
+        f"{ordinal} {tipo_texto.upper()}."
     )
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -80,8 +97,8 @@ def generar_recibo(
     # Cuerpo
     cuerpo = (
         f"Recibí del C. {lote['cliente_nombre']} la cantidad de "
-        f"${monto:,.0f} ({monto_letras(monto)}), "
-        f"por concepto de la {ordinal} mensualidad de un total de "
+        f"${monto:,.0f} ({monto_letras(monto)}) mediante {forma_texto}, "
+        f"por concepto de la {ordinal} {tipo_texto} de un total de "
         f"{total_mens} mensualidades por concepto compra venta del terreno "
         f"número {lote['numero']} de mi propiedad ubicado en el proyecto "
         f"{proyecto['nombre']}"

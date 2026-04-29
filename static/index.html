@@ -239,6 +239,38 @@ tr:hover td{background:#fafaf8;}
   </div>
 </div>
 
+<!-- Modal generar recibo -->
+<div class="modal-bg" id="modal-recibo">
+  <div class="modal">
+    <div class="modal-title">Generar recibo</div>
+    <div class="field">
+      <label>Monto ($)</label>
+      <input id="rec-monto" type="number" placeholder="10000">
+    </div>
+    <div class="field">
+      <label>Concepto</label>
+      <select id="rec-tipo" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);">
+        <option value="mensualidad">Mensualidad</option>
+        <option value="abono">Abono</option>
+        <option value="enganche">Enganche</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Forma de pago</label>
+      <select id="rec-forma" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);">
+        <option value="transferencia">Transferencia bancaria</option>
+        <option value="efectivo">Efectivo</option>
+        <option value="cheque">Cheque</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-recibo')">Cancelar</button>
+      <button class="btn btn-g" onclick="confirmarRecibo()">Generar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal editar pago -->
 <div class="modal-bg" id="modal-edit-pago">
   <div class="modal">
@@ -505,9 +537,10 @@ async function loadLoteDetail(lid) {
       <div style="font-size:10px;color:var(--muted);margin-top:3px;">${pct}% pagado</div>
     </div>` : ''}
   `;
-  loteInfoEl.dataset.numero = lote.numero;
-  loteInfoEl.dataset.nombre = lote.cliente_nombre;
-  loteInfoEl.dataset.phone  = lote.cliente_phone;
+  loteInfoEl.dataset.numero      = lote.numero;
+  loteInfoEl.dataset.nombre      = lote.cliente_nombre;
+  loteInfoEl.dataset.phone       = lote.cliente_phone;
+  loteInfoEl.dataset.mensualidad = (lote.contrato_json?.mensualidad || '');
 
   // Contrato
   const contrato = lote.contrato_json;
@@ -669,13 +702,33 @@ async function loadAllPagos() {
 }
 
 // ─── Generador de recibos ─────────────────────────────────────────────────────
-async function generarRecibo() {
+function generarRecibo() {
   if (!currentLote) return;
-  const btn = event.target;
-  btn.textContent = 'Generando...';
-  btn.disabled = true;
+  // Prellenar monto con la mensualidad del contrato si está disponible
+  const mens = document.querySelector('#lote-info')?.dataset?.mensualidad || '';
+  document.getElementById('rec-monto').value = mens;
+  document.getElementById('rec-tipo').value  = 'mensualidad';
+  document.getElementById('rec-forma').value = 'transferencia';
+  document.getElementById('modal-recibo').classList.add('open');
+}
+
+async function confirmarRecibo() {
+  const monto = parseFloat(document.getElementById('rec-monto').value);
+  const tipo  = document.getElementById('rec-tipo').value;
+  const forma = document.getElementById('rec-forma').value;
+  if (!monto || monto <= 0) return alert('Ingresa un monto válido');
+
+  closeModal('modal-recibo');
+
+  const btn = document.querySelector('[onclick="generarRecibo()"]');
+  if (btn) { btn.textContent = 'Generando...'; btn.disabled = true; }
+
   try {
-    const res = await fetch(`/api/lotes/${currentLote}/recibo`);
+    const res = await fetch(`/api/lotes/${currentLote}/recibo`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ monto, tipo, forma_pago: forma })
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       alert('⚠️ ' + (err.detail || 'Error generando recibo'));
@@ -691,8 +744,7 @@ async function generarRecibo() {
   } catch {
     alert('⚠️ Error de conexión');
   } finally {
-    btn.textContent = '📄 Generar recibo';
-    btn.disabled = false;
+    if (btn) { btn.textContent = '📄 Generar recibo'; btn.disabled = false; }
   }
 }
 
