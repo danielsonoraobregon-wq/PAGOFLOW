@@ -254,25 +254,30 @@ async def upload_contrato(lid: int, file: UploadFile = File(...)):
 
     update_lote_contract(lid, contrato, filename, monto_total)
 
-    # El enganche se cobra al momento de la firma — registrarlo solo si no existe ya
+    # El enganche se cobra al momento de la firma
     enganche = float(contrato.get("enganche") or 0)
-    enganche_ya_existe = any(
-        p.get("referencia") == "ENGANCHE"
-        for p in get_pagos_by_lote(lid)
-    )
-    if enganche > 0 and not enganche_ya_existe:
-        save_pago(
-            lote_id        = lid,
-            monto          = enganche,
-            monto_esperado = enganche,
-            referencia     = "ENGANCHE",
-            banco          = "Firma de contrato",
-            fecha          = datetime.now().strftime("%Y-%m-%d"),
-            archivo_drive  = filename,
-            drive_ok       = drive_ok,
-            discrepancia   = None,
-            estatus        = "ok",
-        )
+    if enganche > 0:
+        pagos_lote = get_pagos_by_lote(lid)
+        pago_enganche = next((p for p in pagos_lote if p.get("referencia") == "ENGANCHE"), None)
+        if pago_enganche:
+            # Contrato reemplazado — actualizar monto del enganche si cambió
+            if float(pago_enganche.get("monto") or 0) != enganche:
+                update_pago(pago_enganche["id"], enganche, pago_enganche["fecha"],
+                            "ENGANCHE", "Firma de contrato")
+        else:
+            # Primera vez — registrar enganche
+            save_pago(
+                lote_id        = lid,
+                monto          = enganche,
+                monto_esperado = enganche,
+                referencia     = "ENGANCHE",
+                banco          = "Firma de contrato",
+                fecha          = datetime.now().strftime("%Y-%m-%d"),
+                archivo_drive  = filename,
+                drive_ok       = drive_ok,
+                discrepancia   = None,
+                estatus        = "ok",
+            )
 
     return {"status": "ok", "contrato": contrato}
 
