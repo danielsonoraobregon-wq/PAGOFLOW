@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PagoFlow</title>
+<style>
+:root{--bg:#f5f5f2;--card:#fff;--border:rgba(0,0,0,0.09);--text:#1a1a18;--muted:#6b6b68;--green:#0F6E56;--gbg:#E1F5EE;--amber:#854F0B;--abg:#FAEEDA;--red:#A32D2D;--rbg:#FCEBEB;--blue:#185FA5;--bbg:#E6F1FB;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.logo{font-size:15px;font-weight:700;letter-spacing:-.3px;}
+.live{font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px;}
+.dot{width:6px;height:6px;border-radius:50%;background:#1D9E75;}
+.layout{display:flex;min-height:calc(100vh - 45px);}
+.sidebar{width:210px;background:var(--card);border-right:1px solid var(--border);padding:16px 0;flex-shrink:0;}
+.nav-section{font-size:10px;color:var(--muted);padding:0 16px 6px;text-transform:uppercase;letter-spacing:.5px;margin-top:12px;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:12px;color:var(--muted);cursor:pointer;border-left:2px solid transparent;}
+.nav-item:hover,.nav-item.active{background:#f5f5f2;color:var(--text);border-left-color:#1D9E75;}
+.nav-item.active{font-weight:500;}
+.nav-sub{padding-left:30px;font-size:11px;}
+.main{flex:1;padding:20px 24px;overflow-y:auto;}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;}
+.metric{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.mlabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.mval{font-size:20px;font-weight:700;}
+.mval.g{color:var(--green);}
+.mval.a{color:var(--amber);}
+.mval.r{color:var(--red);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);}
+.card-title{font-size:12px;font-weight:600;}
+.btn{padding:6px 14px;border-radius:7px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);}
+.btn-g{background:#1D9E75;border-color:#1D9E75;color:#fff;}
+.btn-sm{padding:4px 10px;font-size:11px;}
+.badge{display:inline-flex;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;}
+.bok{background:var(--gbg);color:var(--green);}
+.bwarn{background:var(--abg);color:var(--amber);}
+.berr{background:var(--rbg);color:var(--red);}
+.binfo{background:var(--bbg);color:var(--blue);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{padding:8px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);background:#fafaf8;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.3px;}
+td{padding:9px 14px;border-bottom:1px solid var(--border);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafaf8;}
+.mono{font-family:monospace;font-size:10px;color:var(--muted);}
+.amount{font-weight:600;}
+.progress-wrap{margin:4px 0;}
+.progress-bg{height:5px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;background:#1D9E75;border-radius:3px;transition:width .5s;}
+.screen{display:none;}
+.screen.active{display:block;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.lote-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .15s;}
+.lote-card:hover{border-color:#1D9E75;}
+.lote-num{font-size:18px;font-weight:700;margin-bottom:4px;}
+.lote-name{font-size:12px;color:var(--muted);margin-bottom:10px;}
+.contrato-box{background:#fafaf8;border-radius:7px;padding:10px 12px;margin-bottom:10px;font-size:11px;}
+.cfield{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);}
+.cfield:last-child{border-bottom:none;}
+.clabel{color:var(--muted);}
+.cval{font-weight:500;}
+.upload-zone{border:1.5px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;font-size:12px;color:var(--muted);}
+.upload-zone:hover{border-color:#1D9E75;color:var(--green);}
+.disc-pill{font-size:10px;color:var(--red);background:var(--rbg);padding:2px 7px;border-radius:10px;margin-top:3px;display:inline-block;}
+.back-btn{font-size:11px;color:var(--blue);cursor:pointer;margin-bottom:12px;display:inline-flex;align-items:center;gap:4px;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--card);border-radius:12px;padding:20px;width:380px;max-width:95vw;}
+.modal-title{font-size:14px;font-weight:600;margin-bottom:14px;}
+.field{margin-bottom:10px;}
+.field label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px;}
+.field input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--bg);}
+.modal-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">PagoFlow</div>
+  <div class="live"><div class="dot"></div> Sistema activo</div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="nav-section">General</div>
+    <div class="nav-item active" onclick="showScreen('dashboard')">Dashboard</div>
+    <div class="nav-item" onclick="showScreen('pagos')">Todos los pagos</div>
+    <div class="nav-section">Proyectos</div>
+    <div id="projects-nav"></div>
+    <div class="nav-item" onclick="openNewProject()" style="color:var(--green);margin-top:4px;">+ Nuevo proyecto</div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="screen active" id="screen-dashboard">
+      <div class="metrics" id="metrics">
+        <div class="metric"><div class="mlabel">Total cobrado</div><div class="mval g" id="m1">$0</div></div>
+        <div class="metric"><div class="mlabel">Por cobrar</div><div class="mval a" id="m2">$0</div></div>
+        <div class="metric"><div class="mlabel">Pagos recibidos</div><div class="mval" id="m3">0</div></div>
+        <div class="metric"><div class="mlabel">Lotes activos</div><div class="mval" id="m4">0</div></div>
+        <div class="metric"><div class="mlabel">Discrepancias</div><div class="mval r" id="m5">0</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Últimos pagos recibidos</div></div>
+        <table><thead><tr><th>Cliente</th><th>Lote</th><th>Monto</th><th>Esperado</th><th>Fecha</th><th>Estatus</th><th>Drive</th></tr></thead>
+        <tbody id="recent-pagos"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TODOS LOS PAGOS -->
+    <div class="screen" id="screen-pagos">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Todos los pagos</div></div>
+        <table><thead><tr><th>Cliente</th><th>Proyecto</th><th>Lote</th><th>Monto</th><th>Referencia</th><th>Banco</th><th>Fecha</th><th>Estatus</th></tr></thead>
+        <tbody id="all-pagos-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PROYECTO: lista de lotes -->
+    <div class="screen" id="screen-project">
+      <div class="card-head" style="padding:0 0 12px;"><div class="card-title" id="project-title" style="font-size:15px;"></div></div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Lotes</div>
+          <button class="btn btn-g btn-sm" onclick="openNewLote()">+ Agregar lote</button>
+        </div>
+        <div style="padding:16px;" id="lotes-grid"></div>
+      </div>
+    </div>
+
+    <!-- LOTE: detalle + contrato + pagos -->
+    <div class="screen" id="screen-lote">
+      <div class="back-btn" onclick="backToProject()">← Volver al proyecto</div>
+      <div class="grid2" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Información del lote</div></div>
+          <div style="padding:14px;" id="lote-info"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Contrato <span id="contrato-badge"></span></div></div>
+          <div style="padding:14px;" id="contrato-info"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Historial de pagos</div></div>
+        <table><thead><tr><th>Fecha</th><th>Monto recibido</th><th>Monto esperado</th><th>Referencia</th><th>Banco</th><th>Archivo</th><th>Estatus</th></tr></thead>
+        <tbody id="lote-pagos-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal nuevo proyecto -->
+<div class="modal-bg" id="modal-project">
+  <div class="modal">
+    <div class="modal-title">Nuevo proyecto</div>
+    <div class="field"><label>Nombre del proyecto</label><input id="np-nombre" placeholder="Residencial Los Pinos"></div>
+    <div class="field"><label>Descripción (opcional)</label><input id="np-desc" placeholder="Fraccionamiento en..."></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-project')">Cancelar</button>
+      <button class="btn btn-g" onclick="createProject()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nuevo lote -->
+<div class="modal-bg" id="modal-lote">
+  <div class="modal">
+    <div class="modal-title">Agregar lote</div>
+    <div class="field"><label>Número de lote</label><input id="nl-numero" placeholder="12"></div>
+    <div class="field"><label>Nombre del cliente</label><input id="nl-nombre" placeholder="Juan García"></div>
+    <div class="field"><label>Teléfono WhatsApp (con código país)</label><input id="nl-phone" placeholder="528112345678"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-lote')">Cancelar</button>
+      <button class="btn btn-g" onclick="addLote()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-contrato" accept=".pdf" style="display:none" onchange="uploadContrato(this)">
+
+<script>
+let currentProject = null;
+let currentLote    = null;
+
+// ─── Navegación ───────────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+}
+
+function showProjectScreen(pid) {
+  currentProject = pid;
+  showScreen('project');
+  loadLotes(pid);
+}
+
+function showLoteScreen(lid) {
+  currentLote = lid;
+  showScreen('lote');
+  loadLoteDetail(lid);
+}
+
+function backToProject() {
+  showProjectScreen(currentProject);
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const s = await fetch('/api/stats').then(r => r.json()).catch(() => ({}));
+  document.getElementById('m1').textContent = '$' + (s.total_cobrado||0).toLocaleString('es-MX');
+  document.getElementById('m2').textContent = '$' + (s.por_cobrar||0).toLocaleString('es-MX');
+  document.getElementById('m3').textContent = s.total_pagos||0;
+  document.getElementById('m4').textContent = s.lotes_activos||0;
+  document.getElementById('m5').textContent = s.discrepancias||0;
+}
+
+// ─── Proyectos ────────────────────────────────────────────────────────────────
+async function loadProjects() {
+  const projects = await fetch('/api/projects').then(r => r.json()).catch(() => []);
+  const nav = document.getElementById('projects-nav');
+  nav.innerHTML = projects.map(p =>
+    `<div class="nav-item" onclick="showProjectScreen(${p.id})">${p.nombre}</div>`
+  ).join('');
+}
+
+function openNewProject() { document.getElementById('modal-project').classList.add('open'); }
+function closeModal(id)    { document.getElementById(id).classList.remove('open'); }
+
+async function createProject() {
+  const nombre = document.getElementById('np-nombre').value.trim();
+  const desc   = document.getElementById('np-desc').value.trim();
+  if (!nombre) return;
+  await fetch('/api/projects', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({nombre, descripcion: desc}) });
+  closeModal('modal-project');
+  document.getElementById('np-nombre').value = '';
+  document.getElementById('np-desc').value   = '';
+  loadProjects();
+}
+
+// ─── Lotes ────────────────────────────────────────────────────────────────────
+async function loadLotes(pid) {
+  const project = await fetch('/api/projects').then(r => r.json()).then(ps => ps.find(p => p.id === pid));
+  document.getElementById('project-title').textContent = project?.nombre || 'Proyecto';
+
+  const lotes = await fetch(`/api/projects/${pid}/lotes`).then(r => r.json()).catch(() => []);
+  const grid  = document.getElementById('lotes-grid');
+
+  if (!lotes.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);">Sin lotes. Agrega el primero.</div>';
+    return;
+  }
+
+  grid.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">' +
+    lotes.map(l => {
+      const pagado  = l.monto_pagado || 0;
+      const total   = l.monto_total  || 0;
+      const pct     = total > 0 ? Math.min(100, Math.round(pagado / total * 100)) : 0;
+      const falta   = total > 0 ? total - pagado : null;
+      const contrato = l.contrato_json ? '<span class="badge bok">Contrato ✓</span>' : '<span class="badge bwarn">Sin contrato</span>';
+      return `
+      <div class="lote-card" onclick="showLoteScreen(${l.id})">
+        <div class="lote-num">Lote ${l.numero}</div>
+        <div class="lote-name">${l.cliente_nombre}</div>
+        ${total > 0 ? `
+        <div class="progress-wrap">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px;">
+            <span>Pagado: $${pagado.toLocaleString('es-MX')}</span>
+            <span>${pct}%</span>
+          </div>
+          <div class="progress-bg"><div class="progress-fill" style="width:${pct}%"></div></div>
+          ${falta !== null ? `<div style="font-size:10px;color:var(--amber);margin-top:3px;">Falta: $${falta.toLocaleString('es-MX')}</div>` : ''}
+        </div>` : ''}
+        <div style="margin-top:8px;">${contrato}</div>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+function openNewLote() { document.getElementById('modal-lote').classList.add('open'); }
+
+async function addLote() {
+  const numero = document.getElementById('nl-numero').value.trim();
+  const nombre = document.getElementById('nl-nombre').value.trim();
+  const phone  = document.getElementById('nl-phone').value.trim();
+  if (!numero || !nombre || !phone) return alert('Llena todos los campos');
+  await fetch(`/api/projects/${currentProject}/lotes`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({numero, nombre, phone})
+  });
+  closeModal('modal-lote');
+  document.getElementById('nl-numero').value = '';
+  document.getElementById('nl-nombre').value = '';
+  document.getElementById('nl-phone').value  = '';
+  loadLotes(currentProject);
+}
+
+// ─── Detalle de lote ──────────────────────────────────────────────────────────
+async function loadLoteDetail(lid) {
+  const lote  = await fetch(`/api/lotes/${lid}`).then(r => r.json());
+  const pagos = await fetch(`/api/lotes/${lid}/pagos`).then(r => r.json());
+
+  const pagado = lote.monto_pagado || 0;
+  const total  = lote.monto_total  || 0;
+  const falta  = total > 0 ? total - pagado : null;
+  const pct    = total > 0 ? Math.min(100, Math.round(pagado / total * 100)) : 0;
+
+  document.getElementById('lote-info').innerHTML = `
+    <div class="cfield"><span class="clabel">Cliente</span><span class="cval">${lote.cliente_nombre}</span></div>
+    <div class="cfield"><span class="clabel">Teléfono</span><span class="cval mono">+${lote.cliente_phone}</span></div>
+    <div class="cfield"><span class="clabel">Lote</span><span class="cval">${lote.numero}</span></div>
+    ${total > 0 ? `
+    <div class="cfield"><span class="clabel">Total contrato</span><span class="cval">$${total.toLocaleString('es-MX')}</span></div>
+    <div class="cfield"><span class="clabel">Pagado</span><span class="cval" style="color:var(--green)">$${pagado.toLocaleString('es-MX')}</span></div>
+    <div class="cfield"><span class="clabel">Falta</span><span class="cval" style="color:var(--amber)">$${(falta||0).toLocaleString('es-MX')}</span></div>
+    <div style="margin-top:10px;">
+      <div class="progress-bg"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px;">${pct}% pagado</div>
+    </div>` : ''}
+  `;
+
+  // Contrato
+  const contrato = lote.contrato_json;
+  const cb = document.getElementById('contrato-badge');
+  const ci = document.getElementById('contrato-info');
+
+  if (contrato) {
+    cb.innerHTML = '<span class="badge bok">✓ Cargado</span>';
+    ci.innerHTML = `
+      <div class="contrato-box">
+        <div class="cfield"><span class="clabel">Monto total</span><span class="cval">$${(contrato.monto_total||0).toLocaleString('es-MX')}</span></div>
+        <div class="cfield"><span class="clabel">Enganche</span><span class="cval">$${(contrato.enganche||0).toLocaleString('es-MX')}</span></div>
+        <div class="cfield"><span class="clabel">Mensualidad</span><span class="cval">$${(contrato.mensualidad||0).toLocaleString('es-MX')}</span></div>
+        <div class="cfield"><span class="clabel">No. mensualidades</span><span class="cval">${contrato.total_mensualidades||'—'}</span></div>
+        <div class="cfield"><span class="clabel">Día de pago</span><span class="cval">Día ${contrato.dia_pago||'—'}</span></div>
+        <div class="cfield"><span class="clabel">Mora</span><span class="cval">${contrato.penalizacion_mora||'Sin penalización'}</span></div>
+        ${contrato.notas ? `<div style="margin-top:6px;font-size:10px;color:var(--muted);">${contrato.notas}</div>` : ''}
+      </div>
+    `;
+  } else {
+    cb.innerHTML = '<span class="badge bwarn">Sin contrato</span>';
+    ci.innerHTML = `
+      <div class="upload-zone" onclick="document.getElementById('file-contrato').click()">
+        <div style="font-size:20px;margin-bottom:6px;">📄</div>
+        <div>Subir PDF del contrato</div>
+        <div style="font-size:10px;margin-top:3px;">La IA extraerá automáticamente los datos de pago</div>
+      </div>
+    `;
+  }
+
+  // Pagos del lote
+  const tbody = document.getElementById('lote-pagos-body');
+  if (!pagos.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);">Sin pagos registrados aún</td></tr>';
+    return;
+  }
+  tbody.innerHTML = pagos.map(p => {
+    const est = p.estatus === 'ok'
+      ? '<span class="badge bok">✓ Correcto</span>'
+      : `<span class="badge berr">${p.estatus}</span>${p.discrepancia ? `<div class="disc-pill">${p.discrepancia}</div>` : ''}`;
+    return `<tr>
+      <td>${p.fecha||'—'}</td>
+      <td class="amount">$${(p.monto||0).toLocaleString('es-MX')}</td>
+      <td style="color:var(--muted)">$${(p.monto_esperado||0).toLocaleString('es-MX')}</td>
+      <td class="mono">${p.referencia||'—'}</td>
+      <td>${p.banco||'—'}</td>
+      <td class="mono">${p.archivo_drive||'—'}</td>
+      <td>${est}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function uploadContrato(input) {
+  const file = input.files[0];
+  if (!file || !currentLote) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`/api/lotes/${currentLote}/contrato`, { method:'POST', body: fd });
+  if (res.ok) {
+    alert('✅ Contrato leído y guardado');
+    loadLoteDetail(currentLote);
+  } else {
+    alert('⚠️ Error leyendo contrato');
+  }
+  input.value = '';
+}
+
+// ─── Pagos recientes dashboard ────────────────────────────────────────────────
+async function loadRecentPagos() {
+  const pagos = await fetch('/api/pagos').then(r => r.json()).catch(() => []);
+  const tbody = document.getElementById('recent-pagos');
+  if (!pagos.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);">Sin pagos aún — esperando comprobantes por WhatsApp</td></tr>';
+    return;
+  }
+  tbody.innerHTML = pagos.slice(0,15).map(p => {
+    const est = p.estatus === 'ok'
+      ? '<span class="badge bok">✓</span>'
+      : '<span class="badge berr">⚠ Discrepancia</span>';
+    return `<tr>
+      <td>${p.cliente_nombre}</td>
+      <td><span class="badge binfo">Lote ${p.lote_numero}</span></td>
+      <td class="amount">$${(p.monto||0).toLocaleString('es-MX')}</td>
+      <td style="color:var(--muted)">$${(p.monto_esperado||0).toLocaleString('es-MX')}</td>
+      <td>${p.fecha||'—'}</td>
+      <td>${est}</td>
+      <td>${p.drive_ok ? '<span class="badge bok">Drive ✓</span>' : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadAllPagos() {
+  const pagos = await fetch('/api/pagos').then(r => r.json()).catch(() => []);
+  const tbody = document.getElementById('all-pagos-body');
+  tbody.innerHTML = pagos.map(p => `<tr>
+    <td>${p.cliente_nombre}</td>
+    <td>${p.proyecto_nombre||'—'}</td>
+    <td><span class="badge binfo">Lote ${p.lote_numero}</span></td>
+    <td class="amount">$${(p.monto||0).toLocaleString('es-MX')}</td>
+    <td class="mono">${(p.referencia||'—').slice(0,20)}</td>
+    <td>${p.banco||'—'}</td>
+    <td>${p.fecha||'—'}</td>
+    <td>${p.estatus==='ok'?'<span class="badge bok">✓</span>':'<span class="badge berr">⚠</span>'}</td>
+  </tr>`).join('');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  await loadStats();
+  await loadProjects();
+  await loadRecentPagos();
+}
+
+init();
+setInterval(() => { loadStats(); loadRecentPagos(); }, 30000);
+
+document.getElementById('screen-pagos').addEventListener('click', function() {}, { once: false });
+document.querySelector('[onclick="showScreen(\'pagos\')"]')?.addEventListener('click', loadAllPagos);
+</script>
+</body>
+</html>
