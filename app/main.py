@@ -71,11 +71,13 @@ async def receive_message(request: Request, bg: BackgroundTasks):
 @app.post("/webhook/manychat")
 async def receive_manychat(request: Request, bg: BackgroundTasks):
     body = await request.json()
+    print(f"📩 Manychat body: {json.dumps(body)}")
     phone     = body.get("phone", "")
     media_url = body.get("media_url", "")
     media_type = body.get("media_type", "image")
 
     if not phone or not media_url:
+        print(f"⚠️ Ignorado — phone='{phone}' media_url='{media_url}'")
         return {"status": "ignored"}
 
     bg.add_task(process_comprobante_url, phone, media_url, media_type)
