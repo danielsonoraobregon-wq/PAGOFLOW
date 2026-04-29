@@ -19,7 +19,7 @@ from app.whatsapp import send_message, download_media
 
 load_dotenv()
 
-app = FastAPI(title="PagoFlow")
+app = FastAPI(title="PagoFlow v2")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 VERIFY_TOKEN = os.getenv("WA_VERIFY_TOKEN", "pagoflow_secret")
