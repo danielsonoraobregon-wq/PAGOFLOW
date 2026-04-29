@@ -235,22 +235,22 @@ async def upload_comprobante_manual(lid: int, file: UploadFile = File(...)):
 
 @app.post("/api/lotes/{lid}/contrato")
 async def upload_contrato(lid: int, file: UploadFile = File(...)):
-    pdf_bytes = await file.read()
+    file_bytes = await file.read()
+    mime_type  = file.content_type or "application/pdf"
 
-    # IA lee el contrato
-    contrato = await extract_contract_data(pdf_bytes)
+    contrato = await extract_contract_data(file_bytes, mime_type)
     if not contrato:
         raise HTTPException(400, "No se pudo leer el contrato")
 
     monto_total = float(contrato.get("monto_total") or 0)
 
-    # Subir PDF a Drive
     lote = get_lote(lid)
     lote_num   = str(lote["numero"]).zfill(2)
     nombre_fmt = lote["cliente_nombre"].replace(" ", "")
-    filename   = f"Contrato_Lote{lote_num}_{nombre_fmt}.pdf"
+    ext        = "jpg" if mime_type.startswith("image/") else "pdf"
+    filename   = f"Contrato_Lote{lote_num}_{nombre_fmt}.{ext}"
     folder     = f"PagoFlow/Lote-{lote_num}/Contratos"
-    await upload_to_drive(pdf_bytes, filename, folder, "application/pdf")
+    await upload_to_drive(file_bytes, filename, folder, mime_type)
 
     update_lote_contract(lid, contrato, filename, monto_total)
     return {"status": "ok", "contrato": contrato}

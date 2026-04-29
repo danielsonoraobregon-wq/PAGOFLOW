@@ -186,7 +186,7 @@ tr:hover td{background:#fafaf8;}
   </div>
 </div>
 
-<input type="file" id="file-contrato" accept=".pdf" style="display:none" onchange="uploadContrato(this)">
+<input type="file" id="file-contrato" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="uploadContrato(this)">
 <input type="file" id="file-comprobante" accept=".jpg,.jpeg,.png,.pdf,.txt" style="display:none" onchange="uploadComprobante(this)">
 
 <script>
@@ -352,8 +352,8 @@ async function loadLoteDetail(lid) {
     ci.innerHTML = `
       <div class="upload-zone" onclick="document.getElementById('file-contrato').click()">
         <div style="font-size:20px;margin-bottom:6px;">📄</div>
-        <div>Subir PDF del contrato</div>
-        <div style="font-size:10px;margin-top:3px;">La IA extraerá automáticamente los datos de pago</div>
+        <div>Subir contrato</div>
+        <div style="font-size:10px;margin-top:3px;">PDF, JPG o PNG — la IA extrae los datos automáticamente</div>
       </div>
     `;
   }

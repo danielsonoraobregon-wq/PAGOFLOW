@@ -7,12 +7,11 @@ from typing import Optional
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 
-async def extract_contract_data(pdf_bytes: bytes) -> Optional[dict]:
+async def extract_contract_data(file_bytes: bytes, mime_type: str = "application/pdf") -> Optional[dict]:
     """
-    Lee el PDF del contrato y extrae toda la información de pagos.
-    Devuelve dict con monto_total, tabla de pagos, fechas de vencimiento, etc.
+    Lee el contrato (PDF o imagen) y extrae la información de pagos.
     """
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
+    file_b64 = base64.standard_b64encode(file_bytes).decode("utf-8")
 
     prompt = """Eres un extractor de contratos inmobiliarios mexicanos.
 
@@ -44,6 +43,19 @@ Reglas:
 - Si no encuentras algún campo, pon null
 - Responde SOLO con el JSON"""
 
+    is_pdf = "pdf" in mime_type
+    if is_pdf:
+        content_block = {
+            "type": "document",
+            "source": {"type": "base64", "media_type": "application/pdf", "data": file_b64},
+        }
+    else:
+        img_mime = mime_type if mime_type.startswith("image/") else "image/jpeg"
+        content_block = {
+            "type": "image",
+            "source": {"type": "base64", "media_type": img_mime, "data": file_b64},
+        }
+
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             response = await client.post(
@@ -54,29 +66,14 @@ Reglas:
                     "content-type": "application/json",
                 },
                 json={
-                    "model": "claude-haiku-4-5-20251001",
+                    "model": "claude-sonnet-4-6",
                     "max_tokens": 2000,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "document",
-                                    "source": {
-                                        "type": "base64",
-                                        "media_type": "application/pdf",
-                                        "data": pdf_b64,
-                                    },
-                                },
-                                {"type": "text", "text": prompt},
-                            ],
-                        }
-                    ],
+                    "messages": [{"role": "user", "content": [content_block, {"type": "text", "text": prompt}]}],
                 },
             )
 
         if response.status_code != 200:
-            print(f"Error Anthropic API contrato: {response.status_code}")
+            print(f"Error Anthropic API contrato: {response.status_code} {response.text}")
             return None
 
         raw = response.json()["content"][0]["text"].strip()
