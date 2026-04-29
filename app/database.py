@@ -177,6 +177,27 @@ def save_pago(lote_id, monto, monto_esperado, referencia, banco,
     conn.close()
     update_monto_pagado(lote_id)
 
+def update_pago(pago_id: int, monto: float, fecha: str, referencia: str, banco: str):
+    conn = get_conn()
+    row = conn.execute("SELECT lote_id FROM pagos WHERE id=?", (pago_id,)).fetchone()
+    conn.execute(
+        "UPDATE pagos SET monto=?, fecha=?, referencia=?, banco=? WHERE id=?",
+        (monto, fecha, referencia, banco, pago_id)
+    )
+    conn.commit()
+    conn.close()
+    if row:
+        update_monto_pagado(row["lote_id"])
+
+def delete_pago(pago_id: int):
+    conn = get_conn()
+    row = conn.execute("SELECT lote_id FROM pagos WHERE id=?", (pago_id,)).fetchone()
+    conn.execute("DELETE FROM pagos WHERE id=?", (pago_id,))
+    conn.commit()
+    conn.close()
+    if row:
+        update_monto_pagado(row["lote_id"])
+
 def get_pagos_by_lote(lote_id: int) -> list:
     conn = get_conn()
     rows = conn.execute(

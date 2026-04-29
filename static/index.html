@@ -161,7 +161,7 @@ tr:hover td{background:#fafaf8;}
           <div class="card-title">Historial de pagos</div>
           <button class="btn btn-g btn-sm" id="btn-comprobante" onclick="document.getElementById('file-comprobante').click()">+ Registrar pago</button>
         </div>
-        <table><thead><tr><th>Fecha</th><th>Monto recibido</th><th>Monto esperado</th><th>Referencia</th><th>Banco</th><th>Archivo</th><th>Estatus</th></tr></thead>
+        <table><thead><tr><th>Fecha</th><th>Monto recibido</th><th>Monto esperado</th><th>Referencia</th><th>Banco</th><th>Archivo</th><th>Estatus</th><th></th></tr></thead>
         <tbody id="lote-pagos-body"></tbody>
         </table>
       </div>
@@ -207,6 +207,22 @@ tr:hover td{background:#fafaf8;}
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-edit-lote')">Cancelar</button>
       <button class="btn btn-g" onclick="saveEditLote()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editar pago -->
+<div class="modal-bg" id="modal-edit-pago">
+  <div class="modal">
+    <div class="modal-title">Editar pago</div>
+    <div class="field"><label>Monto recibido ($)</label><input id="ep-monto" type="number" placeholder="12000"></div>
+    <div class="field"><label>Fecha</label><input id="ep-fecha" type="date"></div>
+    <div class="field"><label>Referencia</label><input id="ep-referencia" placeholder="SPEI123456"></div>
+    <div class="field"><label>Banco</label><input id="ep-banco" placeholder="BBVA"></div>
+    <div class="modal-actions">
+      <button class="btn berr" onclick="deletePago()">Eliminar</button>
+      <button class="btn" onclick="closeModal('modal-edit-pago')">Cancelar</button>
+      <button class="btn btn-g" onclick="saveEditPago()">Guardar</button>
     </div>
   </div>
 </div>
@@ -410,6 +426,9 @@ async function loadLoteDetail(lid) {
   if (contrato) {
     cb.innerHTML = '<span class="badge bok">✓ Cargado</span>';
     ci.innerHTML = `
+      <div style="text-align:right;margin-bottom:8px;">
+        <span class="btn btn-sm" data-action="upload-contrato" style="cursor:pointer;">Cambiar contrato</span>
+      </div>`+`
       <div class="contrato-box">
         <div class="cfield"><span class="clabel">Monto total</span><span class="cval">$${(contrato.monto_total||0).toLocaleString('es-MX')}</span></div>
         <div class="cfield"><span class="clabel">Enganche</span><span class="cval">$${(contrato.enganche||0).toLocaleString('es-MX')}</span></div>
@@ -449,6 +468,7 @@ async function loadLoteDetail(lid) {
       <td>${p.banco||'—'}</td>
       <td class="mono">${p.archivo_drive||'—'}</td>
       <td>${est}</td>
+      <td><button class="btn btn-sm" onclick="openEditPago(${p.id},${p.monto||0},'${p.fecha||''}','${p.referencia||''}','${p.banco||''}')">Editar</button></td>
     </tr>`;
   }).join('');
 }
@@ -461,16 +481,21 @@ async function uploadComprobante(input) {
   const btn = document.getElementById('btn-comprobante');
   btn.textContent = 'Procesando...';
   btn.disabled = true;
-  const res = await fetch(`/api/lotes/${currentLote}/comprobante`, { method:'POST', body: fd });
-  btn.textContent = '+ Registrar pago';
-  btn.disabled = false;
-  if (res.ok) {
-    alert('✅ Comprobante procesado y subido a Drive');
-    loadLoteDetail(currentLote);
-  } else {
-    alert('⚠️ Error procesando el comprobante');
+  try {
+    const res = await fetch(`/api/lotes/${currentLote}/comprobante`, { method:'POST', body: fd });
+    if (res.ok) {
+      alert('✅ Comprobante procesado');
+      loadLoteDetail(currentLote);
+    } else {
+      alert('⚠️ Error procesando el comprobante');
+    }
+  } catch {
+    alert('⚠️ Error de conexión');
+  } finally {
+    btn.textContent = '+ Registrar pago';
+    btn.disabled = false;
+    input.value = '';
   }
-  input.value = '';
 }
 
 function openEditLote() {
@@ -547,6 +572,41 @@ async function loadAllPagos() {
     <td>${p.fecha||'—'}</td>
     <td>${p.estatus==='ok'?'<span class="badge bok">✓</span>':'<span class="badge berr">⚠</span>'}</td>
   </tr>`).join('');
+}
+
+// ─── Editar / eliminar pago ───────────────────────────────────────────────────
+let editPagoId = null;
+
+function openEditPago(id, monto, fecha, referencia, banco) {
+  editPagoId = id;
+  document.getElementById('ep-monto').value      = monto;
+  document.getElementById('ep-fecha').value      = fecha;
+  document.getElementById('ep-referencia').value = referencia;
+  document.getElementById('ep-banco').value      = banco;
+  document.getElementById('modal-edit-pago').classList.add('open');
+}
+
+async function saveEditPago() {
+  if (!editPagoId) return;
+  await fetch(`/api/pagos/${editPagoId}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      monto:      parseFloat(document.getElementById('ep-monto').value),
+      fecha:      document.getElementById('ep-fecha').value,
+      referencia: document.getElementById('ep-referencia').value,
+      banco:      document.getElementById('ep-banco').value,
+    })
+  });
+  closeModal('modal-edit-pago');
+  loadLoteDetail(currentLote);
+}
+
+async function deletePago() {
+  if (!editPagoId || !confirm('¿Eliminar este pago?')) return;
+  await fetch(`/api/pagos/${editPagoId}`, { method: 'DELETE' });
+  closeModal('modal-edit-pago');
+  loadLoteDetail(currentLote);
 }
 
 // ─── Delegación de eventos (Bug 2 + modal pago) ───────────────────────────────

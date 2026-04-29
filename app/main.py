@@ -11,7 +11,7 @@ from app.database import (
     init_db, get_lote_by_phone, save_pago, get_all_pagos,
     get_pagos_by_lote, get_projects, get_project, create_project,
     get_lotes_by_project, get_lote, update_lote_contract,
-    add_lote_client, get_stats
+    add_lote_client, get_stats, update_pago, delete_pago
 )
 from app.extractor import extract_spei_data, extract_contract_data, check_discrepancy
 from app.drive import upload_to_drive
@@ -281,6 +281,19 @@ async def api_edit_lote(lid: int, request: Request):
     update_lote_info(lid, d["numero"], d["nombre"], d["phone"])
     return {"status": "ok"}
 
+
+# ─── Editar / eliminar pago ──────────────────────────────────────────────────
+
+@app.put("/api/pagos/{pid}")
+async def api_edit_pago(pid: int, request: Request):
+    d = await request.json()
+    update_pago(pid, float(d["monto"]), d["fecha"], d.get("referencia",""), d.get("banco",""))
+    return {"status": "ok"}
+
+@app.delete("/api/pagos/{pid}")
+async def api_delete_pago(pid: int):
+    delete_pago(pid)
+    return {"status": "ok"}
 
 # ─── Agregar cliente/lote ─────────────────────────────────────────────────────
 
