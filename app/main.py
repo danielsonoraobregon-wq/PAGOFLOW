@@ -310,7 +310,8 @@ async def api_delete_pago(pid: int):
 async def api_add_lote(pid: int, request: Request):
     d = await request.json()
     add_lote_client(pid, d["numero"], d["nombre"], d["phone"])
-    return {"status": "ok"}
+    lote = get_lote_by_phone(d["phone"])
+    return {"status": "ok", "id": lote["id"] if lote else None}
 
 # ─── Generador de recibos ────────────────────────────────────────────────────
 

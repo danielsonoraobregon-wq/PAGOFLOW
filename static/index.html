@@ -186,17 +186,42 @@ tr:hover td{background:#fafaf8;}
   </div>
 </div>
 
-<!-- Modal nuevo lote -->
+<!-- Modal nuevo lote (2 pasos) -->
 <div class="modal-bg" id="modal-lote">
-  <div class="modal">
-    <div class="modal-title">Agregar lote</div>
-    <div class="field"><label>Número de lote</label><input id="nl-numero" placeholder="12"></div>
-    <div class="field"><label>Nombre del cliente</label><input id="nl-nombre" placeholder="Juan García"></div>
-    <div class="field"><label>Teléfono WhatsApp (con código país)</label><input id="nl-phone" placeholder="528112345678"></div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal('modal-lote')">Cancelar</button>
-      <button class="btn btn-g" onclick="addLote()">Agregar</button>
+  <div class="modal modal-wide">
+
+    <!-- Paso 1: datos del cliente -->
+    <div id="nl-step1">
+      <div class="modal-title">Agregar lote</div>
+      <div class="step-label">Paso 1 de 2 — Datos del cliente</div>
+      <div class="field"><label>Número de lote</label><input id="nl-numero" placeholder="12"></div>
+      <div class="field"><label>Nombre del cliente</label><input id="nl-nombre" placeholder="Juan García"></div>
+      <div class="field"><label>Teléfono WhatsApp (con código país)</label><input id="nl-phone" placeholder="528112345678"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal('modal-lote')">Cancelar</button>
+        <button class="btn btn-g" onclick="addLoteStep1()">Siguiente →</button>
+      </div>
     </div>
+
+    <!-- Paso 2: contrato -->
+    <div id="nl-step2" style="display:none;">
+      <div class="modal-title">Agregar lote</div>
+      <div class="step-label">Paso 2 de 2 — Contrato (opcional)</div>
+      <div id="nl-contrato-resumen" style="background:#fafaf8;border-radius:7px;padding:10px 12px;font-size:12px;margin-bottom:12px;border:1px solid var(--border);"></div>
+      <div class="upload-zone" id="nl-upload-zone" data-action="nl-upload-contrato">
+        <div style="font-size:20px;margin-bottom:6px;">📄</div>
+        <div id="nl-upload-label">Subir contrato (PDF, JPG o PNG)</div>
+        <div style="font-size:10px;margin-top:3px;">La IA extrae los datos automáticamente</div>
+      </div>
+      <div id="nl-progress" style="display:none;margin-top:10px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:5px;" id="nl-progress-label">Procesando contrato...</div>
+        <div class="progress-bg"><div class="progress-fill" id="nl-progress-fill" style="width:0%;transition:width .4s;"></div></div>
+      </div>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button class="btn" onclick="nlSkipContrato()">Saltar por ahora</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -275,6 +300,7 @@ tr:hover td{background:#fafaf8;}
 
 <input type="file" id="file-contrato" accept=".pdf,.jpg,.jpeg,.png" style="opacity:0;position:absolute;width:1px;height:1px;pointer-events:none;" onchange="uploadContrato(this)">
 <input type="file" id="file-comprobante" accept=".jpg,.jpeg,.png,.pdf,.txt" style="opacity:0;position:absolute;width:1px;height:1px;pointer-events:none;" onchange="uploadComprobante(this)">
+<input type="file" id="file-nl-contrato" accept=".pdf,.jpg,.jpeg,.png" style="opacity:0;position:absolute;width:1px;height:1px;pointer-events:none;" onchange="nlSubirContrato(this)">
 <input type="file" id="file-pago-modal" accept=".jpg,.jpeg,.png,.pdf" style="opacity:0;position:absolute;width:1px;height:1px;pointer-events:none;" onchange="pagoSubirArchivo(this)">
 
 <script>
@@ -375,22 +401,84 @@ async function loadLotes(pid) {
     }).join('') + '</div>';
 }
 
-function openNewLote() { document.getElementById('modal-lote').classList.add('open'); }
+let nlLoteId = null;
 
-async function addLote() {
+function openNewLote() {
+  nlLoteId = null;
+  document.getElementById('nl-step1').style.display = 'block';
+  document.getElementById('nl-step2').style.display  = 'none';
+  document.getElementById('nl-progress').style.display = 'none';
+  document.getElementById('nl-upload-label').textContent = 'Subir contrato (PDF, JPG o PNG)';
+  document.getElementById('nl-progress-fill').style.width = '0%';
+  document.getElementById('modal-lote').classList.add('open');
+}
+
+async function addLoteStep1() {
   const numero = document.getElementById('nl-numero').value.trim();
   const nombre = document.getElementById('nl-nombre').value.trim();
   const phone  = document.getElementById('nl-phone').value.trim();
   if (!numero || !nombre || !phone) return alert('Llena todos los campos');
-  await fetch(`/api/projects/${currentProject}/lotes`, {
+
+  const res = await fetch(`/api/projects/${currentProject}/lotes`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({numero, nombre, phone})
   });
-  closeModal('modal-lote');
+  const data = await res.json();
+  nlLoteId = data.id;
+
   document.getElementById('nl-numero').value = '';
   document.getElementById('nl-nombre').value = '';
   document.getElementById('nl-phone').value  = '';
+
+  document.getElementById('nl-contrato-resumen').innerHTML = `
+    <div class="cfield" style="border:none;padding:0;"><span class="clabel">Cliente</span><span class="cval">${nombre} — Lote ${numero}</span></div>
+  `;
+  document.getElementById('nl-step1').style.display = 'none';
+  document.getElementById('nl-step2').style.display  = 'block';
   loadLotes(currentProject);
+}
+
+function nlSkipContrato() {
+  closeModal('modal-lote');
+}
+
+async function nlSubirContrato(input) {
+  const file = input.files[0];
+  if (!file || !nlLoteId) return;
+
+  const progress = document.getElementById('nl-progress');
+  const fill     = document.getElementById('nl-progress-fill');
+  const label    = document.getElementById('nl-progress-label');
+
+  document.getElementById('nl-upload-zone').classList.add('disabled');
+  document.getElementById('nl-upload-label').textContent = file.name;
+  progress.style.display = 'block';
+  label.textContent = 'Procesando contrato con IA...';
+  fill.style.width  = '30%';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    fill.style.width = '60%';
+    const res = await fetch(`/api/lotes/${nlLoteId}/contrato`, { method:'POST', body: fd });
+    fill.style.width = '100%';
+    if (res.ok) {
+      label.textContent = '✅ Contrato procesado correctamente';
+      setTimeout(() => {
+        closeModal('modal-lote');
+        loadLotes(currentProject);
+      }, 1400);
+    } else {
+      label.textContent = '⚠️ Error leyendo el contrato — puedes subirlo después';
+      setTimeout(() => closeModal('modal-lote'), 2000);
+    }
+  } catch {
+    label.textContent = '⚠️ Error de conexión';
+    setTimeout(() => closeModal('modal-lote'), 2000);
+  }
+  input.value = '';
+  document.getElementById('nl-upload-zone').classList.remove('disabled');
 }
 
 // ─── Detalle de lote ──────────────────────────────────────────────────────────
@@ -651,6 +739,8 @@ document.addEventListener('click', function(e) {
 
   if (action === 'upload-contrato') {
     document.getElementById('file-contrato').click();
+  } else if (action === 'nl-upload-contrato') {
+    document.getElementById('file-nl-contrato').click();
 
   } else if (action === 'pago-upload') {
     if (!el.classList.contains('disabled')) {
