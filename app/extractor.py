@@ -23,6 +23,8 @@ Devuelve SOLO este JSON sin texto adicional:
   "enganche": 0.00,
   "pago_a_la_firma": 0.00,
   "mensualidad": 0.00,
+  "superficie": "descripción del área ej: 15,098.26 M2 o null",
+  "ubicacion": "descripción de la ubicación/área del terreno o null",
   "total_mensualidades": 0,
   "fecha_inicio_pagos": "YYYY-MM-DD o null",
   "dia_pago": "día del mes en que vence cada pago, ej: 5",

@@ -159,7 +159,10 @@ tr:hover td{background:#fafaf8;}
       <div class="card">
         <div class="card-head">
           <div class="card-title">Historial de pagos</div>
-          <button class="btn btn-g btn-sm" id="btn-comprobante" onclick="document.getElementById('file-comprobante').click()">+ Registrar pago</button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-sm" onclick="generarRecibo()">📄 Generar recibo</button>
+            <button class="btn btn-g btn-sm" id="btn-comprobante" onclick="document.getElementById('file-comprobante').click()">+ Registrar pago</button>
+          </div>
         </div>
         <table><thead><tr><th>Fecha</th><th>Monto recibido</th><th>Monto esperado</th><th>Referencia</th><th>Banco</th><th>Archivo</th><th>Estatus</th><th></th></tr></thead>
         <tbody id="lote-pagos-body"></tbody>
@@ -575,6 +578,34 @@ async function loadAllPagos() {
     <td>${p.fecha||'—'}</td>
     <td>${p.estatus==='ok'?'<span class="badge bok">✓</span>':'<span class="badge berr">⚠</span>'}</td>
   </tr>`).join('');
+}
+
+// ─── Generador de recibos ─────────────────────────────────────────────────────
+async function generarRecibo() {
+  if (!currentLote) return;
+  const btn = event.target;
+  btn.textContent = 'Generando...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/lotes/${currentLote}/recibo`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('⚠️ ' + (err.detail || 'Error generando recibo'));
+      return;
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const cd   = res.headers.get('Content-Disposition') || '';
+    const name = cd.match(/filename="(.+?)"/)?.[1] || 'recibo.docx';
+    a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    alert('⚠️ Error de conexión');
+  } finally {
+    btn.textContent = '📄 Generar recibo';
+    btn.disabled = false;
+  }
 }
 
 // ─── Editar / eliminar pago ───────────────────────────────────────────────────

@@ -5,3 +5,5 @@ python-dotenv==1.0.1
 google-auth==2.29.0
 google-api-python-client==2.127.0
 python-multipart==0.0.9
+python-docx==1.1.2
+num2words==0.5.13
