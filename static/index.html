@@ -146,7 +146,10 @@ tr:hover td{background:#fafaf8;}
         </div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title">Historial de pagos</div></div>
+        <div class="card-head">
+          <div class="card-title">Historial de pagos</div>
+          <button class="btn btn-g btn-sm" onclick="document.getElementById('file-comprobante').click()">+ Subir comprobante</button>
+        </div>
         <table><thead><tr><th>Fecha</th><th>Monto recibido</th><th>Monto esperado</th><th>Referencia</th><th>Banco</th><th>Archivo</th><th>Estatus</th></tr></thead>
         <tbody id="lote-pagos-body"></tbody>
         </table>
@@ -184,6 +187,7 @@ tr:hover td{background:#fafaf8;}
 </div>
 
 <input type="file" id="file-contrato" accept=".pdf" style="display:none" onchange="uploadContrato(this)">
+<input type="file" id="file-comprobante" accept=".jpg,.jpeg,.png,.pdf,.txt" style="display:none" onchange="uploadComprobante(this)">
 
 <script>
 let currentProject = null;
@@ -374,6 +378,26 @@ async function loadLoteDetail(lid) {
       <td>${est}</td>
     </tr>`;
   }).join('');
+}
+
+async function uploadComprobante(input) {
+  const file = input.files[0];
+  if (!file || !currentLote) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  const btn = document.querySelector('.btn-g.btn-sm');
+  btn.textContent = 'Procesando...';
+  btn.disabled = true;
+  const res = await fetch(`/api/lotes/${currentLote}/comprobante`, { method:'POST', body: fd });
+  btn.textContent = '+ Subir comprobante';
+  btn.disabled = false;
+  if (res.ok) {
+    alert('✅ Comprobante procesado y subido a Drive');
+    loadLoteDetail(currentLote);
+  } else {
+    alert('⚠️ Error procesando el comprobante');
+  }
+  input.value = '';
 }
 
 async function uploadContrato(input) {

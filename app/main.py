@@ -216,6 +216,21 @@ def api_lote_detail(lid: int):
         l["contrato_json"] = json.loads(l["contrato_json"])
     return l
 
+# ─── Subir comprobante manual ────────────────────────────────────────────────
+
+@app.post("/api/lotes/{lid}/comprobante")
+async def upload_comprobante_manual(lid: int, file: UploadFile = File(...)):
+    lote = get_lote(lid)
+    if not lote:
+        raise HTTPException(404, "Lote no encontrado")
+
+    file_bytes = await file.read()
+    mime_type  = file.content_type or "image/jpeg"
+
+    await _process(lote["cliente_phone"], file_bytes, mime_type)
+    return {"status": "ok"}
+
+
 # ─── Subir contrato PDF ───────────────────────────────────────────────────────
 
 @app.post("/api/lotes/{lid}/contrato")
