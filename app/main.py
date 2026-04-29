@@ -254,9 +254,13 @@ async def upload_contrato(lid: int, file: UploadFile = File(...)):
 
     update_lote_contract(lid, contrato, filename, monto_total)
 
-    # El enganche se cobra al momento de la firma — registrarlo como pago automático
+    # El enganche se cobra al momento de la firma — registrarlo solo si no existe ya
     enganche = float(contrato.get("enganche") or 0)
-    if enganche > 0:
+    enganche_ya_existe = any(
+        p.get("referencia") == "ENGANCHE"
+        for p in get_pagos_by_lote(lid)
+    )
+    if enganche > 0 and not enganche_ya_existe:
         save_pago(
             lote_id        = lid,
             monto          = enganche,
