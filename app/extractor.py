@@ -184,7 +184,7 @@ def check_discrepancy(spei_data: dict, lote: dict) -> tuple[str, str]:
     if diferencia > tolerancia:
         if monto_recibido < monto_esperado:
             faltante = monto_esperado - monto_recibido
-            return "monto_incorrecto", f"Pago de ${monto_recibido:,.2f} — esperado ${monto_esperado:,.2f} — falta ${faltante:,.2f}"
+            return "parcial", f"Pago parcial ${monto_recibido:,.2f} — falta ${faltante:,.2f} para completar mensualidad"
         else:
             exceso = monto_recibido - monto_esperado
             return "monto_incorrecto", f"Pago de ${monto_recibido:,.2f} — esperado ${monto_esperado:,.2f} — exceso ${exceso:,.2f}"

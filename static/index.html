@@ -459,6 +459,8 @@ async function loadLoteDetail(lid) {
   tbody.innerHTML = pagos.map(p => {
     const est = p.estatus === 'ok'
       ? '<span class="badge bok">✓ Correcto</span>'
+      : p.estatus === 'parcial'
+      ? `<span class="badge bwarn">Parcial</span>${p.discrepancia ? `<div class="disc-pill">${p.discrepancia}</div>` : ''}`
       : `<span class="badge berr">${p.estatus}</span>${p.discrepancia ? `<div class="disc-pill">${p.discrepancia}</div>` : ''}`;
     return `<tr>
       <td>${p.fecha||'—'}</td>
