@@ -221,6 +221,93 @@ def get_all_pagos() -> list:
     return [dict(r) for r in rows]
 
 
+# ─── Recibos pendientes ───────────────────────────────────────────────────────
+
+def get_recibos_pendientes() -> list:
+    from datetime import date
+    import json as _json
+
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT l.*, pr.nombre as proyecto_nombre,
+               MAX(pg.fecha) as ultimo_pago
+        FROM lotes l
+        JOIN projects pr ON l.project_id = pr.id
+        LEFT JOIN pagos pg ON pg.lote_id = l.id AND pg.referencia != 'ENGANCHE'
+        WHERE l.contrato_json IS NOT NULL
+        GROUP BY l.id
+    """).fetchall()
+    conn.close()
+
+    today      = date.today()
+    pendientes = []
+
+    for row in rows:
+        r        = dict(row)
+        contrato = _json.loads(r['contrato_json']) if r.get('contrato_json') else {}
+        if not contrato:
+            continue
+
+        dia_pago    = int(contrato.get('dia_pago') or 0)
+        monto_total = float(r.get('monto_total') or 0)
+        monto_pag   = float(r.get('monto_pagado') or 0)
+
+        # Lote ya liquidado — ignorar
+        if monto_total > 0 and monto_pag >= monto_total:
+            continue
+
+        ultimo_pago = r.get('ultimo_pago')
+
+        # Verificar si ya pagó este mes
+        pago_este_mes = False
+        if ultimo_pago:
+            try:
+                up = date.fromisoformat(ultimo_pago[:10])
+                pago_este_mes = (up.year == today.year and up.month == today.month)
+            except Exception:
+                pass
+
+        if pago_este_mes:
+            continue
+
+        # Calcular vencimiento
+        if dia_pago:
+            vence = date(today.year, today.month, min(dia_pago, 28))
+            if today < vence:
+                continue  # Todavía no vence este mes
+            dias_vencido = (today - vence).days
+        elif ultimo_pago:
+            try:
+                up = date.fromisoformat(ultimo_pago[:10])
+                dias_vencido = (today - up).days - 30
+                if dias_vencido < 0:
+                    continue
+            except Exception:
+                continue
+        else:
+            fecha_inicio = contrato.get('fecha_inicio_pagos')
+            if not fecha_inicio:
+                continue
+            try:
+                inicio = date.fromisoformat(fecha_inicio[:10])
+                if today < inicio:
+                    continue
+                dias_vencido = (today - inicio).days
+            except Exception:
+                continue
+
+        pendientes.append({
+            'lote_id':        r['id'],
+            'numero':         r['numero'],
+            'cliente_nombre': r['cliente_nombre'],
+            'proyecto_nombre':r['proyecto_nombre'],
+            'ultimo_pago':    ultimo_pago,
+            'dias_vencido':   max(0, dias_vencido),
+            'mensualidad':    contrato.get('mensualidad', 0),
+        })
+
+    return sorted(pendientes, key=lambda x: -x['dias_vencido'])
+
 # ─── Stats ────────────────────────────────────────────────────────────────────
 
 def get_stats() -> dict:

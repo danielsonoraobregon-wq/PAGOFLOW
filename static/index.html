@@ -107,6 +107,17 @@ tr:hover td{background:#fafaf8;}
         <div class="metric"><div class="mlabel">Lotes activos</div><div class="mval" id="m4">0</div></div>
         <div class="metric"><div class="mlabel">Discrepancias</div><div class="mval r" id="m5">0</div></div>
       </div>
+      <div id="alerta-pendientes" style="display:none;background:var(--rbg);border:1px solid var(--red);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:600;color:var(--red);">⚠️ Recibos pendientes de subir a la plataforma</div>
+          <span id="alerta-count" class="badge berr"></span>
+        </div>
+        <table style="font-size:11px;">
+          <thead><tr><th>Cliente</th><th>Lote</th><th>Proyecto</th><th>Último pago</th><th>Días vencido</th><th>Mensualidad</th></tr></thead>
+          <tbody id="alerta-pendientes-body"></tbody>
+        </table>
+      </div>
+
       <div class="card">
         <div class="card-head"><div class="card-title">Últimos pagos recibidos</div></div>
         <table><thead><tr><th>Cliente</th><th>Lote</th><th>Monto</th><th>Esperado</th><th>Fecha</th><th>Estatus</th><th>Drive</th></tr></thead>
@@ -924,15 +935,35 @@ async function pagoSubirArchivo(input) {
   input.value = '';
 }
 
+// ─── Alerta recibos pendientes ────────────────────────────────────────────────
+async function loadRecibosPendientes() {
+  const pendientes = await fetch('/api/recibos-pendientes').then(r => r.json()).catch(() => []);
+  const alerta = document.getElementById('alerta-pendientes');
+  if (!pendientes.length) { alerta.style.display = 'none'; return; }
+
+  alerta.style.display = 'block';
+  document.getElementById('alerta-count').textContent = pendientes.length + ' pendiente' + (pendientes.length > 1 ? 's' : '');
+  document.getElementById('alerta-pendientes-body').innerHTML = pendientes.map(p => `
+    <tr>
+      <td>${p.cliente_nombre}</td>
+      <td><span class="badge binfo">Lote ${p.numero}</span></td>
+      <td>${p.proyecto_nombre}</td>
+      <td>${p.ultimo_pago || '—'}</td>
+      <td style="color:var(--red);font-weight:600;">${p.dias_vencido > 0 ? p.dias_vencido + ' días' : 'Hoy'}</td>
+      <td>$${(p.mensualidad||0).toLocaleString('es-MX')}</td>
+    </tr>`).join('');
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   await loadStats();
   await loadProjects();
   await loadRecentPagos();
+  await loadRecibosPendientes();
 }
 
 init();
-setInterval(() => { loadStats(); loadRecentPagos(); }, 30000);
+setInterval(() => { loadStats(); loadRecentPagos(); loadRecibosPendientes(); }, 30000);
 
 document.getElementById('screen-pagos').addEventListener('click', function() {}, { once: false });
 document.querySelector('[onclick="showScreen(\'pagos\')"]')?.addEventListener('click', loadAllPagos);

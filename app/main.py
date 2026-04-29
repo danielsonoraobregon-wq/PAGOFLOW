@@ -11,7 +11,8 @@ from app.database import (
     init_db, get_lote_by_phone, save_pago, get_all_pagos,
     get_pagos_by_lote, get_projects, get_project, create_project,
     get_lotes_by_project, get_lote, update_lote_contract,
-    add_lote_client, get_stats, update_pago, delete_pago
+    add_lote_client, get_stats, update_pago, delete_pago,
+    get_recibos_pendientes
 )
 from app.extractor import extract_spei_data, extract_contract_data, check_discrepancy
 from app.drive import upload_to_drive
@@ -369,6 +370,10 @@ async def api_generar_recibo(lid: int, request: Request):
 @app.get("/api/stats")
 def api_stats():
     return get_stats()
+
+@app.get("/api/recibos-pendientes")
+def api_recibos_pendientes():
+    return get_recibos_pendientes()
 
 @app.get("/api/pagos")
 def api_all_pagos():
