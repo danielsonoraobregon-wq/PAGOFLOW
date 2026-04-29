@@ -255,6 +255,16 @@ async def upload_contrato(lid: int, file: UploadFile = File(...)):
     update_lote_contract(lid, contrato, filename, monto_total)
     return {"status": "ok", "contrato": contrato}
 
+# ─── Editar lote ─────────────────────────────────────────────────────────────
+
+@app.put("/api/lotes/{lid}")
+async def api_edit_lote(lid: int, request: Request):
+    d = await request.json()
+    from app.database import update_lote_info
+    update_lote_info(lid, d["numero"], d["nombre"], d["phone"])
+    return {"status": "ok"}
+
+
 # ─── Agregar cliente/lote ─────────────────────────────────────────────────────
 
 @app.post("/api/projects/{pid}/lotes")

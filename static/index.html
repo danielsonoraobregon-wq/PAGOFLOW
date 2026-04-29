@@ -137,7 +137,10 @@ tr:hover td{background:#fafaf8;}
       <div class="back-btn" onclick="backToProject()">← Volver al proyecto</div>
       <div class="grid2" style="margin-bottom:16px;">
         <div class="card">
-          <div class="card-head"><div class="card-title">Información del lote</div></div>
+          <div class="card-head">
+            <div class="card-title">Información del lote</div>
+            <button class="btn btn-sm" onclick="openEditLote()">Editar</button>
+          </div>
           <div style="padding:14px;" id="lote-info"></div>
         </div>
         <div class="card">
@@ -148,7 +151,7 @@ tr:hover td{background:#fafaf8;}
       <div class="card">
         <div class="card-head">
           <div class="card-title">Historial de pagos</div>
-          <button class="btn btn-g btn-sm" onclick="document.getElementById('file-comprobante').click()">+ Subir comprobante</button>
+          <button class="btn btn-g btn-sm" id="btn-comprobante" onclick="document.getElementById('file-comprobante').click()">+ Registrar pago</button>
         </div>
         <table><thead><tr><th>Fecha</th><th>Monto recibido</th><th>Monto esperado</th><th>Referencia</th><th>Banco</th><th>Archivo</th><th>Estatus</th></tr></thead>
         <tbody id="lote-pagos-body"></tbody>
@@ -182,6 +185,20 @@ tr:hover td{background:#fafaf8;}
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-lote')">Cancelar</button>
       <button class="btn btn-g" onclick="addLote()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editar lote -->
+<div class="modal-bg" id="modal-edit-lote">
+  <div class="modal">
+    <div class="modal-title">Editar lote</div>
+    <div class="field"><label>Número de lote</label><input id="el-numero" placeholder="12"></div>
+    <div class="field"><label>Nombre del cliente</label><input id="el-nombre" placeholder="Juan García"></div>
+    <div class="field"><label>Teléfono WhatsApp (con código país)</label><input id="el-phone" placeholder="528112345678"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-edit-lote')">Cancelar</button>
+      <button class="btn btn-g" onclick="saveEditLote()">Guardar</button>
     </div>
   </div>
 </div>
@@ -315,7 +332,11 @@ async function loadLoteDetail(lid) {
   const falta  = total > 0 ? total - pagado : null;
   const pct    = total > 0 ? Math.min(100, Math.round(pagado / total * 100)) : 0;
 
-  document.getElementById('lote-info').innerHTML = `
+  const loteInfoEl = document.getElementById('lote-info');
+  loteInfoEl.dataset.numero = lote.numero;
+  loteInfoEl.dataset.nombre = lote.cliente_nombre;
+  loteInfoEl.dataset.phone  = lote.cliente_phone;
+  loteInfoEl.innerHTML = `
     <div class="cfield"><span class="clabel">Cliente</span><span class="cval">${lote.cliente_nombre}</span></div>
     <div class="cfield"><span class="clabel">Teléfono</span><span class="cval mono">+${lote.cliente_phone}</span></div>
     <div class="cfield"><span class="clabel">Lote</span><span class="cval">${lote.numero}</span></div>
@@ -385,11 +406,11 @@ async function uploadComprobante(input) {
   if (!file || !currentLote) return;
   const fd = new FormData();
   fd.append('file', file);
-  const btn = document.querySelector('.btn-g.btn-sm');
+  const btn = document.getElementById('btn-comprobante');
   btn.textContent = 'Procesando...';
   btn.disabled = true;
   const res = await fetch(`/api/lotes/${currentLote}/comprobante`, { method:'POST', body: fd });
-  btn.textContent = '+ Subir comprobante';
+  btn.textContent = '+ Registrar pago';
   btn.disabled = false;
   if (res.ok) {
     alert('✅ Comprobante procesado y subido a Drive');
@@ -398,6 +419,28 @@ async function uploadComprobante(input) {
     alert('⚠️ Error procesando el comprobante');
   }
   input.value = '';
+}
+
+function openEditLote() {
+  const info = document.getElementById('lote-info');
+  document.getElementById('el-numero').value = info.dataset.numero || '';
+  document.getElementById('el-nombre').value = info.dataset.nombre || '';
+  document.getElementById('el-phone').value  = info.dataset.phone  || '';
+  document.getElementById('modal-edit-lote').classList.add('open');
+}
+
+async function saveEditLote() {
+  const numero = document.getElementById('el-numero').value.trim();
+  const nombre = document.getElementById('el-nombre').value.trim();
+  const phone  = document.getElementById('el-phone').value.trim();
+  if (!numero || !nombre || !phone) return alert('Llena todos los campos');
+  await fetch(`/api/lotes/${currentLote}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({numero, nombre, phone})
+  });
+  closeModal('modal-edit-lote');
+  loadLoteDetail(currentLote);
 }
 
 async function uploadContrato(input) {

@@ -150,6 +150,16 @@ def add_lote_client(project_id, numero, nombre, phone):
     conn.close()
 
 
+def update_lote_info(lid, numero, nombre, phone):
+    conn = get_conn()
+    conn.execute(
+        "UPDATE lotes SET numero=?, cliente_nombre=?, cliente_phone=? WHERE id=?",
+        (numero, nombre, phone, lid)
+    )
+    conn.commit()
+    conn.close()
+
+
 # ─── Pagos ────────────────────────────────────────────────────────────────────
 
 def save_pago(lote_id, monto, monto_esperado, referencia, banco,
