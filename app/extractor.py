@@ -21,6 +21,7 @@ Devuelve SOLO este JSON sin texto adicional:
 {
   "monto_total": 0.00,
   "enganche": 0.00,
+  "pago_a_la_firma": 0.00,
   "mensualidad": 0.00,
   "total_mensualidades": 0,
   "fecha_inicio_pagos": "YYYY-MM-DD o null",
@@ -38,6 +39,7 @@ Devuelve SOLO este JSON sin texto adicional:
 }
 
 Reglas:
+- pago_a_la_firma: monto que se paga al momento de firmar el contrato (puede ser parte del enganche o diferente). Si no se especifica por separado, usa el mismo valor que enganche.
 - Si la tabla de pagos tiene más de 60 registros, incluye solo los primeros 12 y el último
 - Todos los montos en número sin símbolos ni comas
 - Si no encuentras algún campo, pon null

@@ -431,7 +431,8 @@ async function loadLoteDetail(lid) {
       </div>`+`
       <div class="contrato-box">
         <div class="cfield"><span class="clabel">Monto total</span><span class="cval">$${(contrato.monto_total||0).toLocaleString('es-MX')}</span></div>
-        <div class="cfield"><span class="clabel">Enganche</span><span class="cval">$${(contrato.enganche||0).toLocaleString('es-MX')}</span></div>
+        <div class="cfield"><span class="clabel">Enganche total</span><span class="cval">$${(contrato.enganche||0).toLocaleString('es-MX')}</span></div>
+        ${contrato.pago_a_la_firma ? `<div class="cfield"><span class="clabel">Pago a la firma</span><span class="cval" style="color:var(--green)">$${(contrato.pago_a_la_firma).toLocaleString('es-MX')}</span></div>` : ''}
         <div class="cfield"><span class="clabel">Mensualidad</span><span class="cval">$${(contrato.mensualidad||0).toLocaleString('es-MX')}</span></div>
         <div class="cfield"><span class="clabel">No. mensualidades</span><span class="cval">${contrato.total_mensualidades||'—'}</span></div>
         <div class="cfield"><span class="clabel">Día de pago</span><span class="cval">Día ${contrato.dia_pago||'—'}</span></div>

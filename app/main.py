@@ -254,8 +254,8 @@ async def upload_contrato(lid: int, file: UploadFile = File(...)):
 
     update_lote_contract(lid, contrato, filename, monto_total)
 
-    # El enganche se cobra al momento de la firma
-    enganche = float(contrato.get("enganche") or 0)
+    # Solo el pago_a_la_firma se cobra al momento de firmar
+    enganche = float(contrato.get("pago_a_la_firma") or contrato.get("enganche") or 0)
     if enganche > 0:
         pagos_lote = get_pagos_by_lote(lid)
         pago_enganche = next((p for p in pagos_lote if p.get("referencia") == "ENGANCHE"), None)
