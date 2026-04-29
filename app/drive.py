@@ -42,7 +42,8 @@ def get_or_create_folder(service, folder_name: str, parent_id: str) -> str:
         q=query,
         spaces="drive",
         fields="files(id, name)",
-        # Solo busca entre archivos que la cuenta de servicio creó (drive.file scope)
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True,
     ).execute()
 
     files = results.get("files", [])
@@ -56,7 +57,7 @@ def get_or_create_folder(service, folder_name: str, parent_id: str) -> str:
         "parents": [parent_id],
     }
     folder = service.files().create(
-        body=folder_metadata, fields="id"
+        body=folder_metadata, fields="id", supportsAllDrives=True
     ).execute()
     return folder["id"]
 
@@ -95,6 +96,7 @@ async def upload_to_drive(
             body=file_metadata,
             media_body=media,
             fields="id",
+            supportsAllDrives=True,
         ).execute()
 
         print(f"✅ Subido a Drive: {folder_path}/{filename}")
